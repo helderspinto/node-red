@@ -1,5 +1,5 @@
 const FRESHNESS_LIMIT_MS = 5 * 60 * 1000;
-const HISTORY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const HISTORY_WINDOW_MS = 30 * 60 * 1000;
 const SVG_NS = "http://www.w3.org/2000/svg";
 const TOKEN_STORAGE_KEY = "token";
 const CLIMATE_REFRESH_INTERVAL_MS = 15 * 1000;
@@ -243,8 +243,8 @@ function renderChart(readings, now) {
     addText(chart, padding.left - 12, y + 4, numberFormat.format(value), "end");
   }
 
-  for (let index = 0; index <= 4; index += 1) {
-    const timestamp = start + (HISTORY_WINDOW_MS * index) / 4;
+  for (let index = 0; index <= 1; index += 1) {
+    const timestamp = start + HISTORY_WINDOW_MS * index;
     const x = xPosition(timestamp);
     chart.append(createSvgElement("line", {
       x1: x,
@@ -253,9 +253,8 @@ function renderChart(readings, now) {
       y2: height - padding.bottom,
       class: "chart-gridline chart-gridline-vertical"
     }));
-    const anchor = index === 0 ? "start" : index === 4 ? "end" : "middle";
-    const hoursAgo = ((4 - index) * 24) / 4;
-    const label = index === 4 ? "Agora" : `−${numberFormat.format(hoursAgo)} h`;
+    const anchor = index === 0 ? "start" : "end";
+    const label = index === 0 ? "−30 min" : "Agora";
     addText(chart, x, height - 16, label, anchor);
   }
 
@@ -312,7 +311,7 @@ function renderReadings(readings) {
   renderChart(currentReadings, Date.now());
   setStatus(
     chartContainer.hidden
-      ? "Não há leituras nas últimas 24 horas."
+      ? "Não há leituras nos últimos 30 minutos."
       : `${currentReadings.length} ${currentReadings.length === 1 ? "leitura" : "leituras"} carregadas.`
   );
 }
