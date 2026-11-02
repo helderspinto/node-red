@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="./">
+  <meta name="theme-color" content="#f4f7f5">
+  <title>Leituras de temperatura | Monitorização</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="dashboard.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#inicio" aria-label="Monitorização, início">
+      <span class="brand-mark" aria-hidden="true">°</span>
+      <span>Monitorização</span>
+    </a>
+    <div class="session-controls">
+      <span id="authenticated-user" class="authenticated-user" hidden></span>
+      <button id="logout-button" class="secondary-button" type="button" hidden>Sair</button>
+    </div>
+  </header>
+
+  <main id="inicio">
+    <section id="login-section" class="login-section" aria-labelledby="login-title">
+      <p class="eyebrow">MONITORIZAÇÃO DOMÉSTICA</p>
+      <h1 id="login-title">Entrar para consultar as leituras</h1>
+      <form id="token-form" class="token-form">
+        <label for="token-input">Token de acesso</label>
+        <div class="token-form-controls">
+          <input id="token-input" name="token" type="password" autocomplete="off" required>
+          <button class="primary-button" type="submit">Entrar</button>
+        </div>
+      </form>
+      <p id="login-status" class="data-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <div id="dashboard-content" hidden>
+      <section class="page-intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">MONITORIZAÇÃO DOMÉSTICA HP</p>
+          <h1 id="page-title">Temperatura em casa</h1>
+          <p class="intro-copy">Consulte o valor mais recente e acompanhe as leituras das últimas 24 horas.</p>
+        </div>
+      </section>
+
+      <section id="resumo" class="overview" aria-labelledby="overview-title">
+        <h2 id="overview-title" class="section-heading">Resumo</h2>
+        <div class="summary-grid">
+          <article class="metric-card metric-primary">
+            <div class="metric-topline">
+              <p class="metric-label">Valor mais recente</p>
+              <span class="metric-icon" aria-hidden="true">↗</span>
+            </div>
+            <p class="metric-value" id="latest-value">--</p>
+            <p class="metric-caption" id="latest-timestamp">A aguardar dados</p>
+            <p class="stale-warning" id="stale-warning" role="status" hidden>Leitura desactualizada: tem mais de 5 minutos.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="historico" class="history-section" aria-labelledby="history-title">
+        <div class="section-title-row">
+          <div>
+            <p class="eyebrow">EVOLUÇÃO RECENTE</p>
+            <h2 id="history-title">Últimas 24 horas</h2>
+          </div>
+        </div>
+        <p id="data-status" class="data-status" role="status" aria-live="polite"></p>
+        <button id="retry-button" class="secondary-button retry-button" type="button" hidden>Tentar de novo</button>
+        <div id="chart-container" class="chart-container" hidden>
+          <svg id="readings-chart" class="readings-chart" role="img" aria-label="Gráfico de linha das temperaturas registadas nas últimas 24 horas"></svg>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <small>Monitorização doméstica</small>
+  </footer>
+</body>
+</html>
