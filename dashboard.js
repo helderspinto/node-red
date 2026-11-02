@@ -2,6 +2,15 @@ const FRESHNESS_LIMIT_MS = 5 * 60 * 1000;
 const HISTORY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const SVG_NS = "http://www.w3.org/2000/svg";
 const TOKEN_STORAGE_KEY = "token";
+const CLIMATE_REFRESH_INTERVAL_MS = 15 * 1000;
+const DEFAULT_CLIMATE_COLOR = "#9e9e9e";
+const CLIMATE_ACTION_LABELS = {
+  arrefecer: "A arrefecer",
+  aquecer: "A aquecer",
+  neutro: "Em repouso",
+  suprimida: "Automação suspensa",
+  "sem dados": "Sem dados"
+};
 
 const loginSection = document.querySelector("#login-section");
 const loginForm = document.querySelector("#token-form");
@@ -17,9 +26,17 @@ const statusElement = document.querySelector("#data-status");
 const retryButton = document.querySelector("#retry-button");
 const chartContainer = document.querySelector("#chart-container");
 const chart = document.querySelector("#readings-chart");
+const climateCard = document.querySelector("#climate-card");
+const climateAction = document.querySelector("#climate-action");
+const climateReason = document.querySelector("#climate-reason");
+const climateTimestamp = document.querySelector("#climate-timestamp");
+const climateError = document.querySelector("#climate-error");
 let latestTimestamp = null;
 let currentReadings = [];
 let currentRequest = 0;
+let currentClimateRequest = 0;
+let climateRefreshInterval = null;
+let hasClimateState = false;
 
 function formatTimestamp(timestamp) {
   return new Intl.DateTimeFormat("pt-PT", {
@@ -44,6 +61,7 @@ function setStatus(message, isError = false, canRetry = false) {
 }
 
 function showLogin(message = "", token = "") {
+  stopClimatePolling();
   loginSection.hidden = false;
   dashboardContent.hidden = true;
   authenticatedUser.hidden = true;
@@ -60,6 +78,95 @@ function showDashboard() {
   authenticatedUser.hidden = false;
   logoutButton.hidden = false;
   loginStatus.textContent = "";
+}
+
+function stopClimatePolling() {
+  currentClimateRequest += 1;
+  if (climateRefreshInterval !== null) {
+    window.clearInterval(climateRefreshInterval);
+    climateRefreshInterval = null;
+  }
+}
+
+function renderClimateState(data) {
+  const hasKnownAction = data !== null
+    && typeof data === "object"
+    && Object.hasOwn(CLIMATE_ACTION_LABELS, data.acao);
+  const hasValidColor = typeof data?.cor === "string"
+    && /^#[\da-f]{6}$/i.test(data.cor);
+  const action = hasKnownAction && hasValidColor ? data.acao : "sem dados";
+  const color = action === "sem dados" ? DEFAULT_CLIMATE_COLOR : data.cor;
+  const timestamp = typeof data?.instante === "string"
+    && Number.isFinite(Date.parse(data.instante))
+    ? `Estado atualizado a ${formatTimestamp(data.instante)}`
+    : "Instante indisponível";
+
+  climateCard.style.setProperty("--estado-cor", color);
+  climateCard.classList.remove("is-stale");
+  climateAction.textContent = CLIMATE_ACTION_LABELS[action];
+  climateReason.textContent = typeof data?.motivo === "string" && data.motivo !== ""
+    ? data.motivo
+    : action === "sem dados" ? "Ainda não há registos." : "Sem motivo indicado.";
+  climateTimestamp.textContent = timestamp;
+  climateError.textContent = "";
+  climateError.hidden = true;
+  hasClimateState = true;
+}
+
+function showClimateError() {
+  climateError.textContent = "Não foi possível obter o estado.";
+  climateError.hidden = false;
+  climateCard.classList.toggle("is-stale", hasClimateState);
+}
+
+async function loadClimateState(token) {
+  const requestId = ++currentClimateRequest;
+  const sessionRequestId = currentRequest;
+  try {
+    const response = await fetch("/api/privado/estado", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (requestId !== currentClimateRequest || sessionRequestId !== currentRequest) {
+      return;
+    }
+
+    if (response.status === 401) {
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+      currentRequest += 1;
+      showLogin("A sessão expirou. Introduza novamente o token.", token);
+      return;
+    }
+
+    if (!response.ok) {
+      showClimateError();
+      return;
+    }
+
+    const data = await response.json();
+    if (requestId !== currentClimateRequest || sessionRequestId !== currentRequest) {
+      return;
+    }
+
+    renderClimateState(data);
+  } catch (error) {
+    if (requestId !== currentClimateRequest || sessionRequestId !== currentRequest) {
+      return;
+    }
+    console.error("Não foi possível obter o estado da climatização.", error);
+    showClimateError();
+  }
+}
+
+function startClimatePolling(token) {
+  stopClimatePolling();
+  loadClimateState(token);
+  climateRefreshInterval = window.setInterval(
+    () => loadClimateState(token),
+    CLIMATE_REFRESH_INTERVAL_MS
+  );
 }
 
 function createSvgElement(name, attributes = {}) {
@@ -199,7 +306,7 @@ function renderReadings(readings) {
   valueElement.textContent = new Intl.NumberFormat("pt-PT", {
     maximumFractionDigits: 2
   }).format(latestReading.valor);
-  timestampElement.textContent = `Registado a ${formatTimestamp(latestTimestamp)}`;
+  timestampElement.textContent = `Leitura registada a ${formatTimestamp(latestTimestamp)}`;
   updateStaleWarning();
 
   renderChart(currentReadings, Date.now());
@@ -284,10 +391,12 @@ loginForm.addEventListener("submit", (event) => {
   }
   sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
   loadReadings(token);
+  startClimatePolling(token);
 });
 
 logoutButton.addEventListener("click", () => {
   currentRequest += 1;
+  stopClimatePolling();
   sessionStorage.removeItem(TOKEN_STORAGE_KEY);
   currentReadings = [];
   latestTimestamp = null;
@@ -312,6 +421,7 @@ const savedToken = sessionStorage.getItem(TOKEN_STORAGE_KEY);
 if (savedToken) {
   tokenInput.value = savedToken;
   loadReadings(savedToken);
+  startClimatePolling(savedToken);
 } else {
   showLogin();
 }

@@ -244,7 +244,7 @@ h1 {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: minmax(0, 30rem);
+  grid-template-columns: repeat(2, minmax(0, 30rem));
   gap: 1rem;
 }
 
@@ -264,6 +264,35 @@ h1 {
 .metric-primary {
   border-color: #cfe6da;
   background: linear-gradient(140deg, #eaf6ef 0%, #fff 78%);
+}
+
+.climate-card {
+  border-inline-start: 0.35rem solid var(--estado-cor, #9e9e9e);
+}
+
+.climate-indicator {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex: 0 0 auto;
+  margin-bottom: 0.7rem;
+  border-radius: 50%;
+  background-color: var(--estado-cor, #9e9e9e);
+}
+
+.climate-card.is-stale .metric-value,
+.climate-card.is-stale .metric-caption {
+  opacity: 0.45;
+}
+
+.climate-error {
+  margin: 0.75rem 0 0;
+  color: #a33131;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.climate-error[hidden] {
+  display: none;
 }
 
 .metric-topline {
